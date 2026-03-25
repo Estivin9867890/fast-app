@@ -22,6 +22,7 @@ export default function CreatePage() {
   const [locating, setLocating] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [photoFile, setPhotoFile] = useState<File | null>(null);
 
@@ -45,28 +46,33 @@ export default function CreatePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!photoPreview || !photoFile) return;
+    if (!photoPreview || !photoFile || isSubmitting) return;
 
-    // Upload photo (to Supabase Storage if configured, else blob URL)
-    const userId = currentUser?.id ?? "me";
-    const photo_url = await uploadPostPhoto(photoFile, userId);
+    setIsSubmitting(true);
+    try {
+      const userId = currentUser?.id ?? "me";
+      const photo_url = await uploadPostPhoto(photoFile, userId);
 
-    await addRating({
-      user_id:   userId,
-      title:     form.title,
-      theme:     form.theme,
-      score:     form.score,
-      comment:   form.comment,
-      photo_url,
-      lat:       location?.lat ?? 48.8566 + (Math.random() - 0.5) * 0.05,
-      lng:       location?.lng ?? 2.3522 + (Math.random() - 0.5) * 0.05,
-    });
+      await addRating({
+        user_id:   userId,
+        title:     form.title,
+        theme:     form.theme,
+        score:     form.score,
+        comment:   form.comment,
+        photo_url,
+        lat:       location?.lat ?? 48.8566 + (Math.random() - 0.5) * 0.05,
+        lng:       location?.lng ?? 2.3522 + (Math.random() - 0.5) * 0.05,
+      });
 
-    setSubmitted(true);
-    setTimeout(() => router.push("/feed"), 1200);
+      setSubmitted(true);
+      router.push("/feed");
+    } catch (err) {
+      console.error("[create] handleSubmit error:", err);
+      setIsSubmitting(false);
+    }
   };
 
-  const canSubmit = !!form.title && !!photoPreview;
+  const canSubmit = !!form.title && !!photoPreview && !isSubmitting;
   const meta = THEME_META[form.theme];
 
   if (submitted) {
@@ -263,7 +269,15 @@ export default function CreatePage() {
             boxShadow: canSubmit ? `0 8px 32px ${meta.color}35` : "none",
           }}
         >
-          {!photoPreview
+          {isSubmitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"/>
+              </svg>
+              Publication en cours…
+            </span>
+          ) : !photoPreview
             ? "📷 Ajoute d'abord une photo"
             : !form.title
             ? "✏️ Nomme ce que tu notes"

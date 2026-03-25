@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { Rating, THEME_META } from "@/lib/mockData";
 import { useApp } from "@/lib/AppContext";
 import { getLikeCount, getUserLike, toggleLike } from "@/lib/likeService";
@@ -128,6 +129,20 @@ export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
     setSubmitting(false);
   };
 
+  const handleShare = async () => {
+    const url = `${window.location.origin}/feed`;
+    const text = `${rating.title} — ${rating.score}/10`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Fast.", text, url });
+      } catch {
+        // user cancelled
+      }
+    } else {
+      await navigator.clipboard.writeText(`${text} ${url}`);
+    }
+  };
+
   const timeAgo = (d: string) => {
     const h = Math.floor((Date.now() - new Date(d).getTime()) / 3_600_000);
     return h < 1 ? "maintenant" : h < 24 ? `${h}h` : `${Math.floor(h / 24)}j`;
@@ -201,11 +216,19 @@ export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
           label="Carte"
           onClick={() => onMapClick(rating)}
         />
+        <SideAction
+          icon="↗️"
+          label="Partager"
+          onClick={handleShare}
+        />
       </div>
 
       {/* ══ BOTTOM INFO ══ */}
       <div className="absolute bottom-0 left-0 right-0 z-20 pb-20 px-4 pr-14 space-y-2">
-        <div className="flex items-center gap-2">
+        <Link
+          href={`/profile/${rating.user_id}`}
+          className="flex items-center gap-2 w-fit"
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={rating.avatar}
@@ -215,7 +238,7 @@ export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
           <span className="text-sm font-semibold text-white/90 drop-shadow truncate">
             {rating.author}
           </span>
-        </div>
+        </Link>
         <h2 className="text-[22px] font-black text-white leading-tight drop-shadow-lg line-clamp-2">
           {rating.title}
         </h2>
@@ -231,7 +254,10 @@ export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
           >
             💬 {commentCount > 0 ? `${commentCount} commentaire${commentCount > 1 ? "s" : ""}` : "Commenter"}
           </button>
-          <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 text-white/65 text-xs font-semibold hover:bg-white/20 transition-colors">
+          <button
+            onClick={handleShare}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 text-white/65 text-xs font-semibold hover:bg-white/20 transition-colors"
+          >
             ↗ Partager
           </button>
         </div>

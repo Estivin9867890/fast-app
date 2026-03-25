@@ -9,7 +9,7 @@ import {
   ReactNode,
 } from "react";
 import { Rating, mockRatings } from "@/lib/mockData";
-import { getPosts, createPost } from "@/lib/postService";
+import { getPosts, createPost, deletePost, updatePost } from "@/lib/postService";
 
 interface AppState {
   ratings: Rating[];
@@ -17,6 +17,8 @@ interface AppState {
   isLoading: boolean;
   currentUser: { id: string } | null;
   addRating: (r: Omit<Rating, "id" | "created_at" | "author" | "avatar"> & Partial<Rating>) => Promise<void>;
+  deleteRating: (id: string, photoUrl?: string) => Promise<void>;
+  updateRating: (id: string, updates: Partial<Pick<Rating, "title" | "score" | "theme" | "comment">>) => Promise<void>;
   setActiveTheme: (t: string) => void;
   refreshPosts: () => Promise<void>;
 }
@@ -122,9 +124,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const deleteRating = useCallback(async (id: string, photoUrl?: string) => {
+    setRatings((prev) => prev.filter((r) => r.id !== id));
+    await deletePost(id, photoUrl);
+  }, []);
+
+  const updateRating = useCallback(
+    async (id: string, updates: Partial<Pick<Rating, "title" | "score" | "theme" | "comment">>) => {
+      setRatings((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, ...updates } : r))
+      );
+      await updatePost(id, updates);
+    },
+    []
+  );
+
   return (
     <AppContext.Provider
-      value={{ ratings, activeTheme, isLoading, currentUser, addRating, setActiveTheme, refreshPosts }}
+      value={{ ratings, activeTheme, isLoading, currentUser, addRating, deleteRating, updateRating, setActiveTheme, refreshPosts }}
     >
       {children}
     </AppContext.Provider>

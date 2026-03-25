@@ -1,4 +1,4 @@
-import type { Rating } from "@/lib/mockData";
+import type { Rating, Theme } from "@/lib/mockData";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -101,6 +101,67 @@ export async function createPost(
 
   const profilesMap = await fetchProfilesMap(supabase, data.user_id ? [data.user_id] : []);
   return mergePostWithProfile(data, profilesMap);
+}
+
+/** Fetch all posts for a given user, newest first. */
+export async function getPostsByUser(userId: string): Promise<Rating[]> {
+  if (!isConfigured) return [];
+
+  const { supabase } = await import("@/lib/supabase");
+
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error || !data || data.length === 0) return [];
+
+  const profilesMap = await fetchProfilesMap(supabase, [userId]);
+  return data.map((row: unknown) => mergePostWithProfile(row, profilesMap));
+}
+
+/** Delete a post and its associated photo from storage. */
+export async function deletePost(postId: string, photoUrl?: string): Promise<boolean> {
+  if (!isConfigured) return false;
+
+  const { supabase } = await import("@/lib/supabase");
+
+  // Delete photo from storage if it's a Supabase Storage URL
+  if (photoUrl) {
+    const storageBase = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/post-photos/`;
+    if (photoUrl.startsWith(storageBase)) {
+      const path = photoUrl.replace(storageBase, "");
+      await supabase.storage.from("post-photos").remove([path]);
+    }
+  }
+
+  const { error } = await supabase.from("posts").delete().eq("id", postId);
+  if (error) {
+    console.error("[postService] deletePost error:", error.message);
+    return false;
+  }
+  return true;
+}
+
+/** Update title, score, theme and/or comment of a post. */
+export async function updatePost(
+  postId: string,
+  updates: Partial<Pick<Rating, "title" | "score" | "theme" | "comment">>
+): Promise<boolean> {
+  if (!isConfigured) return false;
+
+  const { supabase } = await import("@/lib/supabase");
+  const { error } = await supabase
+    .from("posts")
+    .update(updates as Record<string, unknown>)
+    .eq("id", postId);
+
+  if (error) {
+    console.error("[postService] updatePost error:", error.message);
+    return false;
+  }
+  return true;
 }
 
 /** Upload a photo to Supabase Storage and return its public URL. */
