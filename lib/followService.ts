@@ -110,6 +110,65 @@ export async function getFollowerCount(userId: string): Promise<number> {
   return count ?? 0;
 }
 
+export interface FollowUser {
+  id: string;
+  name: string;
+  username: string;
+  avatar_url: string;
+}
+
+/** People who follow userId (with profile info). */
+export async function getFollowers(userId: string): Promise<FollowUser[]> {
+  if (!isConfigured) return [];
+  const { supabase } = await import("@/lib/supabase");
+
+  const { data: rows } = await supabase
+    .from("follows")
+    .select("follower_id")
+    .eq("following_id", userId);
+
+  if (!rows || rows.length === 0) return [];
+  const ids = rows.map((r: { follower_id: string }) => r.follower_id);
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, name, username, avatar_url")
+    .in("id", ids);
+
+  return (profiles ?? []).map((p: { id: string; name?: string; username?: string; avatar_url?: string }) => ({
+    id: p.id,
+    name: p.name ?? "",
+    username: p.username ?? "",
+    avatar_url: p.avatar_url ?? `https://api.dicebear.com/7.x/thumbs/svg?seed=${p.id}`,
+  }));
+}
+
+/** People that userId is following (with profile info). */
+export async function getFollowing(userId: string): Promise<FollowUser[]> {
+  if (!isConfigured) return [];
+  const { supabase } = await import("@/lib/supabase");
+
+  const { data: rows } = await supabase
+    .from("follows")
+    .select("following_id")
+    .eq("follower_id", userId);
+
+  if (!rows || rows.length === 0) return [];
+  const ids = rows.map((r: { following_id: string }) => r.following_id);
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, name, username, avatar_url")
+    .in("id", ids);
+
+  return (profiles ?? []).map((p: { id: string; name?: string; username?: string; avatar_url?: string }) => ({
+    id: p.id,
+    name: p.name ?? "",
+    username: p.username ?? "",
+    avatar_url: p.avatar_url ?? `https://api.dicebear.com/7.x/thumbs/svg?seed=${p.id}`,
+  }));
+}
+
 /** Number of people this user is following. */
 export async function getFollowingCount(userId: string): Promise<number> {
   if (!isConfigured) return 0;

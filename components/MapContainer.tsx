@@ -109,8 +109,9 @@ export default function MapContainerComponent({ ratings, focusedRating }: MapCon
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    // All posts appear on the map — Paris [48.8566, 2.3522] as fallback
     ratings.forEach((r) => {
+      // Posts explicitly marked "sans localisation" (0,0) are hidden from map
+      if (r.lat === 0 && r.lng === 0) return;
       const lat = r.lat ?? 48.8566;
       const lng = r.lng ?? 2.3522;
 

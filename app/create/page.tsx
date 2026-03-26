@@ -27,6 +27,7 @@ export default function CreatePage() {
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [noLocation, setNoLocation] = useState(false);
 
   const [photoFile, setPhotoFile] = useState<File | null>(null);
 
@@ -64,8 +65,8 @@ export default function CreatePage() {
         score:     form.score,
         comment:   form.comment,
         photo_url,
-        lat:       location?.lat,
-        lng:       location?.lng,
+        lat:       noLocation ? 0 : (location?.lat ?? 48.8566),
+        lng:       noLocation ? 0 : (location?.lng ?? 2.3522),
       });
 
       setSubmitted(true);
@@ -243,9 +244,29 @@ export default function CreatePage() {
 
         {/* ── Geolocation ── */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-            Localisation <span className="text-zinc-600 normal-case">(optionnel)</span>
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+              Localisation <span className="text-zinc-600 normal-case">(optionnel)</span>
+            </label>
+            {/* Toggle "sans localisation" */}
+            <button
+              type="button"
+              onClick={() => { setNoLocation((v) => !v); setLocation(null); }}
+              className="flex items-center gap-2 text-xs font-semibold transition-colors"
+              style={{ color: noLocation ? "#a78bfa" : "rgb(113,113,122)" }}
+            >
+              <span
+                className="relative inline-flex h-5 w-9 rounded-full transition-colors"
+                style={{ background: noLocation ? "#7c3aed" : "rgb(63,63,70)" }}
+              >
+                <span
+                  className="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform"
+                  style={{ transform: noLocation ? "translateX(16px)" : "translateX(0)" }}
+                />
+              </span>
+              Sans localisation
+            </button>
+          </div>
 
           {location && (
             <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-green-950/30 border border-green-500/30 text-green-400 text-sm font-semibold">
@@ -260,25 +281,33 @@ export default function CreatePage() {
             </div>
           )}
 
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleGeolocate}
-              disabled={locating}
-              className="flex-1 py-2.5 rounded-xl border font-semibold text-sm transition-all flex items-center justify-center gap-1.5"
-              style={{ background: "rgb(24,24,27)", borderColor: "rgb(63,63,70)", color: "rgb(161,161,170)" }}
-            >
-              {locating ? <>📡 …</> : <>📍 GPS</>}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowPicker(true)}
-              className="flex-1 py-2.5 rounded-xl border font-semibold text-sm transition-all flex items-center justify-center gap-1.5"
-              style={{ background: "rgb(24,24,27)", borderColor: "rgb(63,63,70)", color: "rgb(161,161,170)" }}
-            >
-              🗺️ Choisir sur carte
-            </button>
-          </div>
+          {!noLocation && (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleGeolocate}
+                disabled={locating}
+                className="flex-1 py-2.5 rounded-xl border font-semibold text-sm transition-all flex items-center justify-center gap-1.5"
+                style={{ background: "rgb(24,24,27)", borderColor: "rgb(63,63,70)", color: "rgb(161,161,170)" }}
+              >
+                {locating ? <>📡 …</> : <>📍 GPS</>}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPicker(true)}
+                className="flex-1 py-2.5 rounded-xl border font-semibold text-sm transition-all flex items-center justify-center gap-1.5"
+                style={{ background: "rgb(24,24,27)", borderColor: "rgb(63,63,70)", color: "rgb(161,161,170)" }}
+              >
+                🗺️ Choisir sur carte
+              </button>
+            </div>
+          )}
+
+          {noLocation && (
+            <p className="text-xs text-violet-400/70 font-medium">
+              Ce post n&apos;apparaîtra pas sur la carte.
+            </p>
+          )}
         </div>
 
         {showPicker && (

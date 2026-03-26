@@ -14,7 +14,11 @@ import {
   isFollowing,
   getFollowerCount,
   getFollowingCount,
+  getFollowers,
+  getFollowing,
+  FollowUser,
 } from "@/lib/followService";
+import FollowListDrawer from "@/components/FollowListDrawer";
 
 interface PublicProfile {
   id: string;
@@ -36,6 +40,10 @@ export default function PublicProfilePage() {
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [followLoading, setFollowLoading] = useState(false);
+  type DrawerType = "followers" | "following" | null;
+  const [drawerOpen, setDrawerOpen] = useState<DrawerType>(null);
+  const [drawerUsers, setDrawerUsers] = useState<FollowUser[]>([]);
+  const [drawerLoading, setDrawerLoading] = useState(false);
 
   // Redirect to /profile if viewing own profile
   useEffect(() => {
@@ -97,6 +105,17 @@ export default function PublicProfilePage() {
 
     load();
   }, [id, allRatings]);
+
+  const openDrawer = async (type: "followers" | "following") => {
+    if (!id) return;
+    setDrawerOpen(type);
+    setDrawerLoading(true);
+    const users = type === "followers"
+      ? await getFollowers(id as string)
+      : await getFollowing(id as string);
+    setDrawerUsers(users);
+    setDrawerLoading(false);
+  };
 
   const handleFollowToggle = async () => {
     if (!currentUser?.id || !id) return;
@@ -176,15 +195,15 @@ export default function PublicProfilePage() {
             <p className="text-zinc-500 text-xs">Notes</p>
           </div>
           <div className="w-px bg-zinc-800" />
-          <div className="text-center">
+          <button onClick={() => openDrawer("followers")} className="text-center hover:opacity-75 transition-opacity">
             <p className="text-2xl font-black text-white">{followerCount}</p>
             <p className="text-zinc-500 text-xs">Abonnés</p>
-          </div>
+          </button>
           <div className="w-px bg-zinc-800" />
-          <div className="text-center">
+          <button onClick={() => openDrawer("following")} className="text-center hover:opacity-75 transition-opacity">
             <p className="text-2xl font-black text-white">{followingCount}</p>
             <p className="text-zinc-500 text-xs">Abonnements</p>
-          </div>
+          </button>
           <div className="w-px bg-zinc-800" />
           <div className="text-center">
             <p
@@ -269,6 +288,14 @@ export default function PublicProfilePage() {
           <p className="text-zinc-500 text-sm">Aucune publication pour l&apos;instant.</p>
         </div>
       )}
+
+      <FollowListDrawer
+        isOpen={drawerOpen !== null}
+        onClose={() => setDrawerOpen(null)}
+        title={drawerOpen === "followers" ? "Abonnés" : "Abonnements"}
+        users={drawerUsers}
+        loading={drawerLoading}
+      />
 
       <BottomNav />
     </div>

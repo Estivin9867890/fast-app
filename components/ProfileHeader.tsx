@@ -19,6 +19,8 @@ interface ProfileHeaderProps {
   avgScore: string;
   followerCount?: number;
   followingCount?: number;
+  onClickFollowers?: () => void;
+  onClickFollowing?: () => void;
 }
 
 export default function ProfileHeader({
@@ -28,6 +30,8 @@ export default function ProfileHeader({
   avgScore,
   followerCount = 0,
   followingCount = 0,
+  onClickFollowers,
+  onClickFollowing,
 }: ProfileHeaderProps) {
   const [editing, setEditing]           = useState(false);
   const [draft, setDraft]               = useState<ProfileData>(profile);
@@ -131,12 +135,18 @@ export default function ProfileHeader({
         {/* Stats */}
         <div className="grid grid-cols-4 gap-2">
           {[
-            { label: "Notes",        value: postCount || "—" },
-            { label: "Abonnés",      value: followerCount },
-            { label: "Abonnements",  value: followingCount },
-            { label: "Moy.",         value: avgScore !== "—" ? `${avgScore}/10` : "—" },
+            { label: "Notes",       value: postCount || "—",                          onClick: undefined },
+            { label: "Abonnés",     value: followerCount,                             onClick: onClickFollowers },
+            { label: "Abonnements", value: followingCount,                            onClick: onClickFollowing },
+            { label: "Moy.",        value: avgScore !== "—" ? `${avgScore}/10` : "—", onClick: undefined },
           ].map((s) => (
-            <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl py-3 text-center">
+            <div
+              key={s.label}
+              onClick={s.onClick}
+              className={`bg-zinc-900 border border-zinc-800 rounded-xl py-3 text-center transition-colors ${
+                s.onClick ? "cursor-pointer hover:border-indigo-500/50 hover:bg-zinc-800" : ""
+              }`}
+            >
               <div className="text-lg font-black text-indigo-400">{s.value}</div>
               <div className="text-xs text-zinc-500 mt-0.5">{s.label}</div>
             </div>

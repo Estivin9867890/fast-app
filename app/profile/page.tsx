@@ -7,7 +7,8 @@ import ProfileHeader, { ProfileData } from "@/components/ProfileHeader";
 import { useApp } from "@/lib/AppContext";
 import { getProfile } from "@/lib/profileService";
 import { THEME_META, Rating, THEMES, Theme } from "@/lib/mockData";
-import { getFollowerCount, getFollowingCount } from "@/lib/followService";
+import { getFollowerCount, getFollowingCount, getFollowers, getFollowing, unfollowUser, FollowUser } from "@/lib/followService";
+import FollowListDrawer from "@/components/FollowListDrawer";
 
 const GUEST_PROFILE: ProfileData = {
   id:         "",
@@ -30,6 +31,11 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  type DrawerType = "followers" | "following" | null;
+  const [drawerOpen, setDrawerOpen] = useState<DrawerType>(null);
+  const [drawerUsers, setDrawerUsers] = useState<FollowUser[]>([]);
+  const [drawerLoading, setDrawerLoading] = useState(false);
+  const [unfollowingId, setUnfollowingId] = useState<string | null>(null);
 
   // Load real profile when user is logged in
   useEffect(() => {
@@ -61,6 +67,26 @@ export default function ProfilePage() {
     });
   }, [currentUser]);
 
+  const openDrawer = async (type: "followers" | "following") => {
+    if (!currentUser?.id) return;
+    setDrawerOpen(type);
+    setDrawerLoading(true);
+    const users = type === "followers"
+      ? await getFollowers(currentUser.id)
+      : await getFollowing(currentUser.id);
+    setDrawerUsers(users);
+    setDrawerLoading(false);
+  };
+
+  const handleUnfollow = async (targetId: string) => {
+    if (!currentUser?.id) return;
+    setUnfollowingId(targetId);
+    await unfollowUser(currentUser.id, targetId);
+    setDrawerUsers((prev) => prev.filter((u) => u.id !== targetId));
+    setFollowingCount((n) => Math.max(0, n - 1));
+    setUnfollowingId(null);
+  };
+
   const myRatings = currentUser
     ? ratings.filter((r) => r.user_id === currentUser.id)
     : [];
@@ -77,6 +103,8 @@ export default function ProfilePage() {
         avgScore={avgScore}
         followerCount={followerCount}
         followingCount={followingCount}
+        onClickFollowers={() => openDrawer("followers")}
+        onClickFollowing={() => openDrawer("following")}
       />
 
       {/* Auth CTA — only shown when not logged in */}
@@ -349,6 +377,17 @@ export default function ProfilePage() {
           </Link>
         </div>
       )}
+
+      <FollowListDrawer
+        isOpen={drawerOpen !== null}
+        onClose={() => setDrawerOpen(null)}
+        title={drawerOpen === "followers" ? "Abonnés" : "Abonnements"}
+        users={drawerUsers}
+        loading={drawerLoading}
+        canUnfollow={drawerOpen === "following"}
+        onUnfollow={handleUnfollow}
+        unfollowingId={unfollowingId}
+      />
 
       <BottomNav />
     </div>
