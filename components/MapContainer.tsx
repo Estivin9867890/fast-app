@@ -109,9 +109,14 @@ export default function MapContainerComponent({ ratings, focusedRating }: MapCon
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    // Add markers for current (already-filtered) ratings
-    ratings.forEach((r) => {
-      if (!r.lat || !r.lng) return;
+    // Strict filter — no default coords, no zero coords
+    const visibleRatings = ratings.filter(
+      (r) =>
+        r.lat !== null && r.lat !== undefined && r.lat !== 0 &&
+        r.lng !== null && r.lng !== undefined && r.lng !== 0
+    );
+
+    visibleRatings.forEach((r) => {
 
       const scoreColor = r.score >= 8 ? "#22c55e" : r.score >= 5 ? "#f59e0b" : "#ef4444";
 

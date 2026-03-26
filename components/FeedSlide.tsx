@@ -276,49 +276,50 @@ export default function FeedSlide({ rating, onMapClick, followingIds = [], onFol
       </div>
 
       {/* ══ BOTTOM INFO ══ */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 pb-20 px-4 pr-16 space-y-2">
-        {/* Author row + Follow button */}
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/profile/${rating.user_id}`}
-            className="flex items-center gap-2 flex-1 min-w-0"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={rating.avatar}
-              alt={rating.author}
-              className="w-7 h-7 rounded-full border-2 border-white/20 bg-zinc-800 shrink-0"
-            />
-            <span className="text-sm font-semibold text-white/90 drop-shadow truncate">
-              {rating.author}
-            </span>
-          </Link>
+      <div className="absolute bottom-0 left-0 right-0 z-20 pb-20 px-4 pr-16 space-y-1.5">
+        {/* Author */}
+        <Link
+          href={`/profile/${rating.user_id}`}
+          className="flex items-center gap-2 w-fit"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={rating.avatar}
+            alt={rating.author}
+            className="w-7 h-7 rounded-full border-2 border-white/20 bg-zinc-800 shrink-0"
+          />
+          <span className="text-sm font-semibold text-white/90 drop-shadow truncate">
+            {rating.author}
+          </span>
+        </Link>
 
-          {/* Follow button — only if logged in, not own post, not already following */}
-          {showFollowBtn && !following && (
-            <button
-              onClick={handleFollow}
-              disabled={followLoading}
-              className="shrink-0 px-3 py-1 rounded-full text-xs font-bold transition-all disabled:opacity-50"
-              style={{
-                background: "rgba(79,70,229,0.85)",
-                backdropFilter: "blur(8px)",
-                border: "1px solid rgba(99,102,241,0.5)",
-                color: "white",
-              }}
-            >
-              {followLoading ? "…" : "+ Suivre"}
-            </button>
-          )}
-        </div>
-
+        {/* Title */}
         <h2 className="text-[22px] font-black text-white leading-tight drop-shadow-lg line-clamp-2">
           {rating.title}
         </h2>
+
+        {/* Comment */}
         {rating.comment && (
           <p className="text-white/70 text-sm leading-relaxed line-clamp-2 drop-shadow">
             &ldquo;{rating.comment}&rdquo;
           </p>
+        )}
+
+        {/* Follow button — below description, only if not own post and not already following */}
+        {showFollowBtn && !following && (
+          <button
+            onClick={handleFollow}
+            disabled={followLoading}
+            className="mt-1 px-4 py-1.5 rounded-full text-xs font-bold transition-all disabled:opacity-50"
+            style={{
+              background: "rgba(79,70,229,0.80)",
+              backdropFilter: "blur(8px)",
+              border: "1px solid rgba(99,102,241,0.45)",
+              color: "white",
+            }}
+          >
+            {followLoading ? "…" : "+ Suivre"}
+          </button>
         )}
       </div>
 
