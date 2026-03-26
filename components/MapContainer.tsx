@@ -135,7 +135,7 @@ export default function MapContainerComponent({ ratings, focusedRating }: MapCon
 
   // ── Effect 3: fly to focused rating ────────────────────────────────────────
   useEffect(() => {
-    if (!mapReady || !mapRef.current || !focusedRating?.lat) return;
+    if (!mapReady || !mapRef.current || !focusedRating?.lat || !focusedRating?.lng) return;
 
     mapRef.current.flyTo([focusedRating.lat, focusedRating.lng], 15, { duration: 1 });
 
