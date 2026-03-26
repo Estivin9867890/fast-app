@@ -185,9 +185,16 @@ export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
         >
           {meta.emoji} {rating.theme}
         </span>
-        <span className="text-[11px] text-white/35 font-medium tabular-nums">
-          {timeAgo(rating.created_at)}
-        </span>
+        <div className="flex items-center gap-2">
+          {rating.lat && rating.lng && (
+            <span className="text-[11px] text-white/50 font-medium flex items-center gap-1 backdrop-blur-md bg-black/30 px-2 py-0.5 rounded-full">
+              📍 {rating.lat.toFixed(2)}, {rating.lng.toFixed(2)}
+            </span>
+          )}
+          <span className="text-[11px] text-white/35 font-medium tabular-nums">
+            {timeAgo(rating.created_at)}
+          </span>
+        </div>
       </div>
 
       {/* ══ CENTRE: BIG SCORE ══ */}

@@ -7,6 +7,7 @@ import ProfileHeader, { ProfileData } from "@/components/ProfileHeader";
 import { useApp } from "@/lib/AppContext";
 import { getProfile } from "@/lib/profileService";
 import { THEME_META, Rating, THEMES, Theme } from "@/lib/mockData";
+import { getFollowerCount, getFollowingCount } from "@/lib/followService";
 
 const GUEST_PROFILE: ProfileData = {
   id:         "",
@@ -27,6 +28,8 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileData>(GUEST_PROFILE);
   const [postModal, setPostModal] = useState<PostModal>(null);
   const [saving, setSaving] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
 
   // Load real profile when user is logged in
   useEffect(() => {
@@ -34,6 +37,8 @@ export default function ProfilePage() {
       setProfile(GUEST_PROFILE);
       return;
     }
+    getFollowerCount(currentUser.id).then(setFollowerCount);
+    getFollowingCount(currentUser.id).then(setFollowingCount);
     getProfile(currentUser.id).then((p) => {
       if (p) {
         setProfile({
@@ -70,6 +75,8 @@ export default function ProfilePage() {
         onUpdate={setProfile}
         postCount={myRatings.length}
         avgScore={avgScore}
+        followerCount={followerCount}
+        followingCount={followingCount}
       />
 
       {/* Auth CTA — only shown when not logged in */}
@@ -129,7 +136,7 @@ export default function ProfilePage() {
       {/* ── Post modal (view / edit / confirm delete) ── */}
       {postModal && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center"
+          className="fixed inset-0 z-[60] flex items-end justify-center"
           style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setPostModal(null); }}
         >

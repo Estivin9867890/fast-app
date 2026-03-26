@@ -17,6 +17,8 @@ interface ProfileHeaderProps {
   onUpdate: (updated: ProfileData) => void;
   postCount: number;
   avgScore: string;
+  followerCount?: number;
+  followingCount?: number;
 }
 
 export default function ProfileHeader({
@@ -24,6 +26,8 @@ export default function ProfileHeader({
   onUpdate,
   postCount,
   avgScore,
+  followerCount = 0,
+  followingCount = 0,
 }: ProfileHeaderProps) {
   const [editing, setEditing]           = useState(false);
   const [draft, setDraft]               = useState<ProfileData>(profile);
@@ -125,11 +129,12 @@ export default function ProfileHeader({
         {profile.bio && <p className="text-zinc-300 text-sm leading-relaxed">{profile.bio}</p>}
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {[
-            { label: "Notes",  value: postCount || "—" },
-            { label: "Moy.",   value: avgScore !== "—" ? `${avgScore}/10` : "—" },
-            { label: "Vues",   value: "1.2k" },
+            { label: "Notes",        value: postCount || "—" },
+            { label: "Abonnés",      value: followerCount },
+            { label: "Abonnements",  value: followingCount },
+            { label: "Moy.",         value: avgScore !== "—" ? `${avgScore}/10` : "—" },
           ].map((s) => (
             <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl py-3 text-center">
               <div className="text-lg font-black text-indigo-400">{s.value}</div>

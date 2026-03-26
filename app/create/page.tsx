@@ -1,11 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import { THEMES, THEME_META, Theme } from "@/lib/mockData";
 import { useApp } from "@/lib/AppContext";
 import { uploadPostPhoto } from "@/lib/postService";
+
+const LocationPicker = dynamic(() => import("@/components/LocationPicker"), { ssr: false });
 
 export default function CreatePage() {
   const router = useRouter();
@@ -23,6 +26,7 @@ export default function CreatePage() {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
 
   const [photoFile, setPhotoFile] = useState<File | null>(null);
 
@@ -60,8 +64,8 @@ export default function CreatePage() {
         score:     form.score,
         comment:   form.comment,
         photo_url,
-        lat:       location?.lat ?? 48.8566 + (Math.random() - 0.5) * 0.05,
-        lng:       location?.lng ?? 2.3522 + (Math.random() - 0.5) * 0.05,
+        lat:       location?.lat,
+        lng:       location?.lng,
       });
 
       setSubmitted(true);
@@ -240,22 +244,50 @@ export default function CreatePage() {
         {/* ── Geolocation ── */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-            Localisation <span className="text-zinc-600 normal-case">(optionnel — place un marqueur sur la carte)</span>
+            Localisation <span className="text-zinc-600 normal-case">(optionnel)</span>
           </label>
-          <button
-            type="button"
-            onClick={handleGeolocate}
-            disabled={locating}
-            className="w-full py-2.5 rounded-xl border font-semibold text-sm transition-all flex items-center justify-center gap-2"
-            style={
-              location
-                ? { background: "rgba(22,101,52,0.15)", borderColor: "rgba(34,197,94,0.4)", color: "#4ade80" }
-                : { background: "rgb(24,24,27)", borderColor: "rgb(63,63,70)", color: "rgb(161,161,170)" }
-            }
-          >
-            {locating ? <>📡 Localisation…</> : location ? <>✅ {location.lat.toFixed(3)}, {location.lng.toFixed(3)}</> : <>📍 Me géolocaliser</>}
-          </button>
+
+          {location && (
+            <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-green-950/30 border border-green-500/30 text-green-400 text-sm font-semibold">
+              <span>✅ {location.lat.toFixed(4)}, {location.lng.toFixed(4)}</span>
+              <button
+                type="button"
+                onClick={() => setLocation(null)}
+                className="text-zinc-500 hover:text-zinc-300 transition-colors text-xs ml-2"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleGeolocate}
+              disabled={locating}
+              className="flex-1 py-2.5 rounded-xl border font-semibold text-sm transition-all flex items-center justify-center gap-1.5"
+              style={{ background: "rgb(24,24,27)", borderColor: "rgb(63,63,70)", color: "rgb(161,161,170)" }}
+            >
+              {locating ? <>📡 …</> : <>📍 GPS</>}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowPicker(true)}
+              className="flex-1 py-2.5 rounded-xl border font-semibold text-sm transition-all flex items-center justify-center gap-1.5"
+              style={{ background: "rgb(24,24,27)", borderColor: "rgb(63,63,70)", color: "rgb(161,161,170)" }}
+            >
+              🗺️ Choisir sur carte
+            </button>
+          </div>
         </div>
+
+        {showPicker && (
+          <LocationPicker
+            value={location}
+            onChange={(loc) => setLocation(loc)}
+            onClose={() => setShowPicker(false)}
+          />
+        )}
 
         {/* ── Submit ── */}
         <button

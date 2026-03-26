@@ -8,6 +8,13 @@ import { getProfile } from "@/lib/profileService";
 import { getPostsByUser } from "@/lib/postService";
 import { useApp } from "@/lib/AppContext";
 import { THEME_META, Rating } from "@/lib/mockData";
+import {
+  followUser,
+  unfollowUser,
+  isFollowing,
+  getFollowerCount,
+  getFollowingCount,
+} from "@/lib/followService";
 
 interface PublicProfile {
   id: string;
@@ -25,6 +32,10 @@ export default function PublicProfilePage() {
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [posts, setPosts] = useState<Rating[]>([]);
   const [loading, setLoading] = useState(true);
+  const [following, setFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [followLoading, setFollowLoading] = useState(false);
 
   // Redirect to /profile if viewing own profile
   useEffect(() => {
@@ -38,10 +49,17 @@ export default function PublicProfilePage() {
 
     async function load() {
       setLoading(true);
-      const [p, remotePosts] = await Promise.all([
+      const [p, remotePosts, fCount, fgCount] = await Promise.all([
         getProfile(id as string),
         getPostsByUser(id as string),
+        getFollowerCount(id as string),
+        getFollowingCount(id as string),
       ]);
+      setFollowerCount(fCount);
+      setFollowingCount(fgCount);
+      if (currentUser?.id) {
+        isFollowing(currentUser.id, id as string).then(setFollowing);
+      }
 
       if (p) {
         setProfile({
@@ -79,6 +97,21 @@ export default function PublicProfilePage() {
 
     load();
   }, [id, allRatings]);
+
+  const handleFollowToggle = async () => {
+    if (!currentUser?.id || !id) return;
+    setFollowLoading(true);
+    if (following) {
+      await unfollowUser(currentUser.id, id as string);
+      setFollowing(false);
+      setFollowerCount((n) => Math.max(0, n - 1));
+    } else {
+      await followUser(currentUser.id, id as string);
+      setFollowing(true);
+      setFollowerCount((n) => n + 1);
+    }
+    setFollowLoading(false);
+  };
 
   const avgScore =
     posts.length > 0
@@ -137,10 +170,20 @@ export default function PublicProfilePage() {
         </div>
 
         {/* Stats */}
-        <div className="flex gap-6 mt-1">
+        <div className="flex gap-5 mt-1">
           <div className="text-center">
             <p className="text-2xl font-black text-white">{posts.length}</p>
             <p className="text-zinc-500 text-xs">Notes</p>
+          </div>
+          <div className="w-px bg-zinc-800" />
+          <div className="text-center">
+            <p className="text-2xl font-black text-white">{followerCount}</p>
+            <p className="text-zinc-500 text-xs">Abonnés</p>
+          </div>
+          <div className="w-px bg-zinc-800" />
+          <div className="text-center">
+            <p className="text-2xl font-black text-white">{followingCount}</p>
+            <p className="text-zinc-500 text-xs">Abonnements</p>
           </div>
           <div className="w-px bg-zinc-800" />
           <div className="text-center">
@@ -160,6 +203,22 @@ export default function PublicProfilePage() {
             <p className="text-zinc-500 text-xs">Moyenne</p>
           </div>
         </div>
+
+        {/* Follow button */}
+        {currentUser && currentUser.id !== id && (
+          <button
+            onClick={handleFollowToggle}
+            disabled={followLoading}
+            className="mt-2 px-8 py-2.5 rounded-full font-bold text-sm transition-all disabled:opacity-50"
+            style={
+              following
+                ? { background: "rgb(39,39,42)", border: "1px solid rgb(63,63,70)", color: "rgb(161,161,170)" }
+                : { background: "#4f46e5", color: "white" }
+            }
+          >
+            {followLoading ? "…" : following ? "Se désabonner" : "S'abonner"}
+          </button>
+        )}
       </div>
 
       {/* Posts grid */}
