@@ -109,14 +109,10 @@ export default function MapContainerComponent({ ratings, focusedRating }: MapCon
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    // Strict filter — no default coords, no zero coords
-    const visibleRatings = ratings.filter(
-      (r) =>
-        r.lat !== null && r.lat !== undefined && r.lat !== 0 &&
-        r.lng !== null && r.lng !== undefined && r.lng !== 0
-    );
-
-    visibleRatings.forEach((r) => {
+    // All posts appear on the map — Paris [48.8566, 2.3522] as fallback
+    ratings.forEach((r) => {
+      const lat = r.lat ?? 48.8566;
+      const lng = r.lng ?? 2.3522;
 
       const scoreColor = r.score >= 8 ? "#22c55e" : r.score >= 5 ? "#f59e0b" : "#ef4444";
 
@@ -128,7 +124,7 @@ export default function MapContainerComponent({ ratings, focusedRating }: MapCon
         popupAnchor: [0, -38],
       });
 
-      const marker: LeafletMarker = L.marker([r.lat, r.lng], { icon }).addTo(map);
+      const marker: LeafletMarker = L.marker([lat, lng], { icon }).addTo(map);
       marker.bindPopup(buildPopupHtml(r, scoreColor), {
         className: "dark-popup",
         maxWidth: 240,

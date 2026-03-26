@@ -97,6 +97,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         created_at: new Date().toISOString(),
         author:     "Moi",
         avatar:     "https://api.dicebear.com/7.x/thumbs/svg?seed=me",
+        lat:        48.8566,
+        lng:        2.3522,
         ...payload,
       } as Rating;
 
