@@ -77,7 +77,8 @@ export default function CreatePage() {
     }
   };
 
-  const canSubmit = !!form.title && !!photoPreview && !isSubmitting;
+  const locationChosen = noLocation || location !== null;
+  const canSubmit = !!form.title && !!photoPreview && locationChosen && !isSubmitting;
   const meta = THEME_META[form.theme];
 
   if (submitted) {
@@ -245,8 +246,18 @@ export default function CreatePage() {
         {/* ── Geolocation ── */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-              Localisation <span className="text-zinc-600 normal-case">(optionnel)</span>
+            <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+              Localisation
+              {!locationChosen && (
+                <span className="text-red-400 text-[10px] font-bold px-1.5 py-0.5 bg-red-400/10 rounded-full border border-red-400/20">
+                  Obligatoire
+                </span>
+              )}
+              {locationChosen && (
+                <span className="text-green-400 text-[10px] font-bold px-1.5 py-0.5 bg-green-400/10 rounded-full border border-green-400/20">
+                  ✓
+                </span>
+              )}
             </label>
             {/* Toggle "sans localisation" */}
             <button
@@ -342,6 +353,8 @@ export default function CreatePage() {
             ? "📷 Ajoute d'abord une photo"
             : !form.title
             ? "✏️ Nomme ce que tu notes"
+            : !locationChosen
+            ? "📍 Choisis une localisation"
             : `Publier ⭐ ${form.score}/10`}
         </button>
 
