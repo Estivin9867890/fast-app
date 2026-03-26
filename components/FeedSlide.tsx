@@ -6,10 +6,13 @@ import { Rating, THEME_META } from "@/lib/mockData";
 import { useApp } from "@/lib/AppContext";
 import { getLikeCount, getUserLike, toggleLike } from "@/lib/likeService";
 import { getComments, addComment, Comment } from "@/lib/commentService";
+import { followUser, unfollowUser } from "@/lib/followService";
 
 interface FeedSlideProps {
   rating: Rating;
   onMapClick: (rating: Rating) => void;
+  followingIds?: string[];
+  onFollowed?: (userId: string) => void;
 }
 
 function BigScore({ score }: { score: number }) {
@@ -61,7 +64,23 @@ function SideAction({
   );
 }
 
-export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
+/** Reverse geocode lat/lng → city name via Nominatim (OpenStreetMap, free). */
+async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+      { headers: { "Accept-Language": "fr" } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const a = data.address ?? {};
+    return a.city ?? a.town ?? a.village ?? a.county ?? a.state ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export default function FeedSlide({ rating, onMapClick, followingIds = [], onFollowed }: FeedSlideProps) {
   const { currentUser } = useApp();
   const [liked, setLiked]               = useState(false);
   const [likeCount, setLikeCount]       = useState(0);
@@ -72,10 +91,21 @@ export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
   const [commentText, setCommentText]   = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
   const [submitting, setSubmitting]     = useState(false);
+  const [locationName, setLocationName] = useState<string | null>(null);
+  const [following, setFollowing]       = useState(() => followingIds.includes(rating.user_id));
+  const [followLoading, setFollowLoading] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const meta = THEME_META[rating.theme];
 
-  // Load like count + comment count + user's like state on mount
+  const isOwnPost = currentUser?.id === rating.user_id;
+  const showFollowBtn = currentUser && !isOwnPost;
+
+  // Sync following state when followingIds prop updates
+  useEffect(() => {
+    setFollowing(followingIds.includes(rating.user_id));
+  }, [followingIds, rating.user_id]);
+
+  // Load like count + comment count + user's like state
   useEffect(() => {
     getLikeCount(rating.id).then(setLikeCount);
     getComments(rating.id).then((data) => setCommentCount(data.length));
@@ -84,14 +114,33 @@ export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
     }
   }, [rating.id, currentUser?.id]);
 
+  // Reverse geocode location name once
+  useEffect(() => {
+    if (rating.lat && rating.lng) {
+      reverseGeocode(rating.lat, rating.lng).then(setLocationName);
+    }
+  }, [rating.lat, rating.lng]);
+
   const handleLike = async () => {
-    // Optimistic update
     setLiked((prev) => !prev);
     setLikeCount((c) => (liked ? c - 1 : c + 1));
-    // Persist (no-op if unconfigured or not logged in)
     if (currentUser?.id) {
       await toggleLike(rating.id, currentUser.id, liked);
     }
+  };
+
+  const handleFollow = async () => {
+    if (!currentUser?.id || followLoading) return;
+    setFollowLoading(true);
+    if (following) {
+      await unfollowUser(currentUser.id, rating.user_id);
+      setFollowing(false);
+    } else {
+      await followUser(currentUser.id, rating.user_id);
+      setFollowing(true);
+      onFollowed?.(rating.user_id);
+    }
+    setFollowLoading(false);
   };
 
   const handleToggleComments = async () => {
@@ -133,11 +182,7 @@ export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
     const url = `${window.location.origin}/feed`;
     const text = `${rating.title} — ${rating.score}/10`;
     if (navigator.share) {
-      try {
-        await navigator.share({ title: "Fast.", text, url });
-      } catch {
-        // user cancelled
-      }
+      try { await navigator.share({ title: "Fast.", text, url }); } catch { /* cancelled */ }
     } else {
       await navigator.clipboard.writeText(`${text} ${url}`);
     }
@@ -186,9 +231,9 @@ export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
           {meta.emoji} {rating.theme}
         </span>
         <div className="flex items-center gap-2">
-          {rating.lat && rating.lng && (
-            <span className="text-[11px] text-white/50 font-medium flex items-center gap-1 backdrop-blur-md bg-black/30 px-2 py-0.5 rounded-full">
-              📍 {rating.lat.toFixed(2)}, {rating.lng.toFixed(2)}
+          {locationName && (
+            <span className="text-[11px] text-white/60 font-medium flex items-center gap-1 backdrop-blur-md bg-black/35 px-2.5 py-1 rounded-full">
+              📍 {locationName}
             </span>
           )}
           <span className="text-[11px] text-white/35 font-medium tabular-nums">
@@ -213,7 +258,7 @@ export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
         />
         <SideAction
           icon="💬"
-          label="Comms."
+          label={commentCount > 0 ? String(commentCount) : "0"}
           onClick={handleToggleComments}
           active={showComments}
           activeClass="bg-indigo-500/30 scale-110"
@@ -231,21 +276,42 @@ export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
       </div>
 
       {/* ══ BOTTOM INFO ══ */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 pb-20 px-4 pr-14 space-y-2">
-        <Link
-          href={`/profile/${rating.user_id}`}
-          className="flex items-center gap-2 w-fit"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={rating.avatar}
-            alt={rating.author}
-            className="w-7 h-7 rounded-full border-2 border-white/20 bg-zinc-800 shrink-0"
-          />
-          <span className="text-sm font-semibold text-white/90 drop-shadow truncate">
-            {rating.author}
-          </span>
-        </Link>
+      <div className="absolute bottom-0 left-0 right-0 z-20 pb-20 px-4 pr-16 space-y-2">
+        {/* Author row + Follow button */}
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/profile/${rating.user_id}`}
+            className="flex items-center gap-2 flex-1 min-w-0"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={rating.avatar}
+              alt={rating.author}
+              className="w-7 h-7 rounded-full border-2 border-white/20 bg-zinc-800 shrink-0"
+            />
+            <span className="text-sm font-semibold text-white/90 drop-shadow truncate">
+              {rating.author}
+            </span>
+          </Link>
+
+          {/* Follow button — only if logged in, not own post, not already following */}
+          {showFollowBtn && !following && (
+            <button
+              onClick={handleFollow}
+              disabled={followLoading}
+              className="shrink-0 px-3 py-1 rounded-full text-xs font-bold transition-all disabled:opacity-50"
+              style={{
+                background: "rgba(79,70,229,0.85)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(99,102,241,0.5)",
+                color: "white",
+              }}
+            >
+              {followLoading ? "…" : "+ Suivre"}
+            </button>
+          )}
+        </div>
+
         <h2 className="text-[22px] font-black text-white leading-tight drop-shadow-lg line-clamp-2">
           {rating.title}
         </h2>
@@ -254,23 +320,9 @@ export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
             &ldquo;{rating.comment}&rdquo;
           </p>
         )}
-        <div className="pt-0.5 flex items-center gap-2">
-          <button
-            onClick={handleToggleComments}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 text-white/80 text-xs font-semibold hover:bg-white/20 transition-colors"
-          >
-            💬 {commentCount > 0 ? `${commentCount} commentaire${commentCount > 1 ? "s" : ""}` : "Commenter"}
-          </button>
-          <button
-            onClick={handleShare}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 text-white/65 text-xs font-semibold hover:bg-white/20 transition-colors"
-          >
-            ↗ Partager
-          </button>
-        </div>
       </div>
 
-      {/* ══ COMMENTS DRAWER (slides up from bottom within slide) ══ */}
+      {/* ══ COMMENTS DRAWER ══ */}
       {showComments && (
         <div
           className="absolute inset-x-0 bottom-0 z-30 flex flex-col"
@@ -282,7 +334,6 @@ export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
             borderTop: "1px solid rgba(255,255,255,0.08)",
           }}
         >
-          {/* Handle + header */}
           <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-white/[0.07]">
             <div className="flex items-center gap-2">
               <div className="w-8 h-1 rounded-full bg-zinc-600" />
@@ -301,23 +352,16 @@ export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
             </button>
           </div>
 
-          {/* Comments list */}
           <div className="flex-1 overflow-y-auto px-5 py-3 space-y-4" style={{ scrollbarWidth: "none" }}>
             {loadingComments ? (
               <p className="text-zinc-500 text-sm text-center py-6 animate-pulse">Chargement…</p>
             ) : comments.length === 0 ? (
-              <p className="text-zinc-600 text-sm text-center py-6">
-                Sois le premier à commenter ✍️
-              </p>
+              <p className="text-zinc-600 text-sm text-center py-6">Sois le premier à commenter ✍️</p>
             ) : (
               comments.map((c) => (
                 <div key={c.id} className="flex gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={c.avatar}
-                    alt={c.author}
-                    className="w-7 h-7 rounded-full shrink-0 bg-zinc-800"
-                  />
+                  <img src={c.avatar} alt={c.author} className="w-7 h-7 rounded-full shrink-0 bg-zinc-800" />
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-bold text-white/80">{c.author} </span>
                     <span className="text-xs text-white/60 leading-relaxed">{c.content}</span>
@@ -327,7 +371,6 @@ export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
             )}
           </div>
 
-          {/* Input — pb-20 pour ne pas être caché par la BottomNav */}
           <div className="px-4 pt-3 pb-20 border-t border-white/[0.07]">
             {currentUser ? (
               <div className="flex gap-2 items-center">
@@ -352,9 +395,7 @@ export default function FeedSlide({ rating, onMapClick }: FeedSlideProps) {
               </div>
             ) : (
               <p className="text-xs text-zinc-500 text-center pb-1">
-                <a href="/auth" className="text-indigo-400 font-semibold hover:text-indigo-300">
-                  Connectez-vous
-                </a>{" "}
+                <a href="/auth" className="text-indigo-400 font-semibold hover:text-indigo-300">Connectez-vous</a>{" "}
                 pour commenter
               </p>
             )}

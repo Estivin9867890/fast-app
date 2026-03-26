@@ -15,6 +15,11 @@ export default function FeedPage() {
   const [feedTab, setFeedTab] = useState<FeedTab>("pour-toi");
   const [followingIds, setFollowingIds] = useState<string[]>([]);
 
+  // Optimistic update: add a new user to the following list immediately
+  const handleFollowed = (userId: string) => {
+    setFollowingIds((prev) => prev.includes(userId) ? prev : [...prev, userId]);
+  };
+
   // Load following list when user is logged in
   useEffect(() => {
     if (currentUser?.id) {
@@ -69,7 +74,13 @@ export default function FeedPage() {
       <div className="feed-scroll">
         {filtered.length > 0 ? (
           filtered.map((rating) => (
-            <FeedSlide key={rating.id} rating={rating} onMapClick={handleMapClick} />
+            <FeedSlide
+              key={rating.id}
+              rating={rating}
+              onMapClick={handleMapClick}
+              followingIds={followingIds}
+              onFollowed={handleFollowed}
+            />
           ))
         ) : (
           <div className="h-screen flex flex-col items-center justify-center gap-4 text-center px-8">
