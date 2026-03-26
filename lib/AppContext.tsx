@@ -92,14 +92,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       payload: Omit<Rating, "id" | "created_at" | "author" | "avatar"> & Partial<Rating>
     ) => {
       // 1. Optimistic local insert (instant Feed + Map update)
+      const isNoLocation = payload.lat === 0 && payload.lng === 0;
       const optimistic: Rating = {
         id:         `local-${Date.now()}`,
         created_at: new Date().toISOString(),
         author:     "Moi",
         avatar:     "https://api.dicebear.com/7.x/thumbs/svg?seed=me",
-        lat:        48.8566,
-        lng:        2.3522,
+        lat:        isNoLocation ? null : (payload.lat ?? 48.8566),
+        lng:        isNoLocation ? null : (payload.lng ?? 2.3522),
         ...payload,
+        ...(isNoLocation && { lat: null, lng: null }),
       } as Rating;
 
       setRatings((prev) => [optimistic, ...prev]);

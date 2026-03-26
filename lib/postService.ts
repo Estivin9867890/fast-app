@@ -22,8 +22,10 @@ function mergePostWithProfile(
     score:      Number(row.score),
     comment:    row.comment ?? "",
     photo_url:  row.photo_url,
-    lat:        row.lat ?? 48.8566,
-    lng:        row.lng ?? 2.3522,
+    // 0,0 = "sans localisation" sentinel → null (hidden from map)
+    // null/undefined = old post without GPS → Paris fallback
+    lat:        (row.lat === 0 && row.lng === 0) ? null : (row.lat ?? 48.8566),
+    lng:        (row.lat === 0 && row.lng === 0) ? null : (row.lng ?? 2.3522),
     author:     profile?.username ?? profile?.name ?? "Anonyme",
     avatar:     profile?.avatar_url ?? `https://api.dicebear.com/7.x/thumbs/svg?seed=${row.user_id}`,
   };

@@ -110,10 +110,10 @@ export default function MapContainerComponent({ ratings, focusedRating }: MapCon
     markersRef.current = [];
 
     ratings.forEach((r) => {
-      // Posts explicitly marked "sans localisation" (0,0) are hidden from map
-      if (r.lat === 0 && r.lng === 0) return;
-      const lat = r.lat ?? 48.8566;
-      const lng = r.lng ?? 2.3522;
+      // Strict filter: null lat/lng = "sans localisation" → no marker
+      if (r.lat == null || r.lng == null) return;
+      const lat = r.lat;
+      const lng = r.lng;
 
       const scoreColor = r.score >= 8 ? "#22c55e" : r.score >= 5 ? "#f59e0b" : "#ef4444";
 
