@@ -137,13 +137,15 @@ export default function MapContainerComponent({ ratings, focusedRating }: MapCon
   useEffect(() => {
     if (!mapReady || !mapRef.current || !focusedRating?.lat || !focusedRating?.lng) return;
 
-    mapRef.current.flyTo([focusedRating.lat, focusedRating.lng], 15, { duration: 1 });
+    const { lat, lng } = focusedRating as { lat: number; lng: number };
+
+    mapRef.current.flyTo([lat, lng], 15, { duration: 1 });
 
     markersRef.current.forEach((m: LeafletMarker) => {
       const ll = m.getLatLng();
       if (
-        Math.abs(ll.lat - focusedRating.lat) < 0.0001 &&
-        Math.abs(ll.lng - focusedRating.lng) < 0.0001
+        Math.abs(ll.lat - lat) < 0.0001 &&
+        Math.abs(ll.lng - lng) < 0.0001
       ) {
         m.openPopup();
       }
